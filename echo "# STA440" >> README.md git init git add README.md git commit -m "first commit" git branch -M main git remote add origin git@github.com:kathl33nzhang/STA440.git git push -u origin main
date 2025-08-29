@@ -1,0 +1,7 @@
+echo "# STA440" >> README.md
+git init
+git add README.md
+git commit -m "first commit"
+git branch -M main
+git remote add origin git@github.com:kathl33nzhang/STA440.git
+git push -u origin main
