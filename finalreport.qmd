@@ -1,0 +1,112 @@
+---
+title: "finalreport"
+format: html
+---
+
+```{r}
+library(VGAM)
+library(ggplot2)
+library(dplyr)
+library(scales)
+```
+
+```{r}
+
+x <- read.table("data.txt", header = TRUE, as.is = TRUE)
+
+x$Pass <- round(x$N * x$Pct)
+x$Fail <- x$N - x$Pass
+
+x$timeperiod <- rep(1, nrow(x))
+x$timeperiod[x$Year > 2002] <- 2
+x$timeperiod[x$Year > 2010] <- 3
+x$timeperiod <- factor(x$timeperiod, levels = c(1,2,3), 
+                       labels = c("tp1","tp2","tp3"))
+
+
+bb_model <- vglm(cbind(Pass, Fail) ~ timeperiod, betabinomial, data = x)
+x$fitted_prob <- fitted(bb_model)[,1]
+x$resid_resp <- residuals(bb_model, type = "response")
+
+
+coef_all <- Coef(bb_model)
+names(coef_all)
+
+se_all <- sqrt(diag(vcov(bb_model)))
+
+z_all <- coef_all / se_all
+p_all <- 2 * pnorm(-abs(z_all))
+
+odds_ratios <- c(exp(coef_all[1:3]), NA)
+pred_probs <- c(exp(coef_all[1:3])/(1+exp(coef_all[1:3])), NA)
+
+ci_lower <- c(exp(coef_all[1:3] - 1.96*se_all[1:3]), NA)
+ci_upper <- c(exp(coef_all[1:3] + 1.96*se_all[1:3]), NA)
+
+summary_table <- data.frame(
+  Predictor = c("(Intercept) mu", "(Intercept) rho", "timeperiodtp2", "timeperiodtp3"),
+  Log_Odds = round(coef_all[c(1,4,2,3)],3),
+  Std_Error = round(se_all[c(1,4,2,3)],3),
+  Z_value = round(z_all[c(1,4,2,3)],3),
+  P_value = signif(p_all[c(1,4,2,3)],3),
+  Odds_Ratio = round(odds_ratios[c(1,4,2,3)],3),
+  CI_lower = round(ci_lower[c(1,4,2,3)],3),
+  CI_upper = round(ci_upper[c(1,4,2,3)],3),
+  Predicted_Prob = round(pred_probs[c(1,4,2,3)],3)
+)
+
+print("=== Model Summary Table (including rho) ===")
+print(summary_table)
+
+
+binomial_model <- glm(cbind(Pass, Fail) ~ timeperiod, family = binomial, data = x)
+cat("Beta-Binomial AIC:", AIC(bb_model), "\n")
+cat("Standard Binomial AIC:", AIC(binomial_model), "\n")
+
+
+par(mfrow = c(2, 2))
+plot(x$fitted_prob, x$resid_resp,
+     main = "Residuals vs Fitted",
+     xlab = "Fitted Values", ylab = "Residuals")
+abline(h = 0, lty = 2)
+
+qqnorm(x$resid_resp)
+qqline(x$resid_resp)
+
+plot(x$Pct, x$fitted_prob,
+     main = "Observed vs Fitted",
+     xlab = "Observed", ylab = "Fitted")
+abline(0,1,lty=2)
+
+plot(x$Year, x$resid_resp,
+     main = "Residuals over Time",
+     xlab = "Year", ylab = "Residuals")
+abline(h=0,lty=2)
+par(mfrow = c(1,1))
+```
+
+```{r}
+ggplot(x, aes(x = Year)) +
+  geom_point(aes(y = Pct), color = "blue", size = 2, alpha = 0.7) +
+  geom_line(aes(y = fitted_prob), color = "red", size = 1.2) +
+  geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "gray50", alpha = 0.8) +
+  annotate("text", x = 2003, y = 0.945, label = "Reform 1", angle = 90, vjust = -0.5) +
+  annotate("text", x = 2011, y = 0.945, label = "Reform 2", angle = 90, vjust = -0.5) +
+  labs(title = "Medical Residents Exam Pass Rates",
+       subtitle = "Observed vs Fitted with Beta-Binomial Model",
+       y = "Pass Rate",
+       x = "Year") +
+  scale_y_continuous(limits = c(0.8,0.95), labels = scales::percent) +
+  theme_minimal(base_size = 14) +
+  theme(plot.title = element_text(hjust = 0.5, face = "bold"),
+        plot.subtitle = element_text(hjust = 0.5),
+        axis.title = element_text(face = "bold"))
+```
+
+The baseline log-odds of passing during the pre-reform era (tp1) are represented by the intercept for mu. While the coefficient for timeperiodtp3 shows a smaller increase that is not statistically significant at conventional levels, the coefficient for timeperiodtp2 shows a statistically significant increase in pass rates in comparison to the baseline. There is only slight overdispersion in the data, as indicated by the dispersion parameter (rho), which is small and not statistically significant. \
+\
+With an AIC of 262.62, the beta-binomial model significantly outperformed the standard binomial model, which had an AIC of 714.13. This demonstrates that the beta-binomial model fits data much better and accounts for overdispersion.\
+\
+According to residual diagnostics, the model does a good job of fitting the data. The QQ plot suggests approximate normality, while the residuals versus fitted values plot displays no discernible pattern. The model's ability to capture observed trends is confirmed by the close alignment of observed and fitted pass rates along the identity line. The lack of a discernible temporal trend in the residuals plotted over time supports the adequacy of the model.\
+\
+Although the predicted probability indicates a modest increase, the analysis shows that the second reform (2011) did not result in a significant change, while the first reform (2003) had a statistically significant positive effect on exam pass rates. Because it took overdispersion into account and produced more accurate estimates, the beta-binomial model was better than the standard binomial. All things considered, this modeling technique effectively manages data variability while enabling a quantitative evaluation of the effects of policies on exam results.

@@ -2,8 +2,3 @@
 title: "report"
 format: html
 ---
-
-```{r}
-x<-read.table("data.txt",header=TRUE,as.is=TRUE)
-dim(x)
-```
