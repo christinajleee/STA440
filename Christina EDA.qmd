@@ -1,0 +1,63 @@
+```{r}
+library(dplyr)
+
+data <- read.table("data.txt", header = TRUE)
+```
+
+```{r}
+# Load data
+data <- read.table("data.txt", header = TRUE)
+
+# Separate the 3 different reform periods up
+data$Period <- cut(data$Year,
+                   breaks = c(1995, 2002, 2010, 2020),
+                   labels = c("Pre-2003 (before reform)", "2003-2010 (after reform 1)", "2011+ (after reform 2)"))
+
+# Compute number passing (successes) and failing (failures)
+data$Pass <- round(data$N * data$Pct)
+data$Fail <- data$N - data$Pass
+
+# Logistic regression: Passes vs. Fails across periods
+model <- glm(cbind(Pass, Fail) ~ Period, family = binomial, data = data)
+summary(model)
+
+# Plot 
+library(ggplot2)
+pred <- data.frame(Period = levels(data$Period))
+pred$fit <- predict(model, newdata = pred, type = "response")
+
+ggplot(data, aes(x = Year, y = Pct, color = Period)) +
+  geom_point(size = 2) +
+  geom_line(aes(group = 1), color = "grey") +
+  geom_hline(yintercept = pred$fit, linetype = "dashed", color = "black") +
+  labs(title = "Pass Rates Over Time with Reform Periods",
+       y = "Pass Rate", x = "Year") +
+  theme_minimal()
+```
+```{r}
+aggregate(Pct ~ Period, data, mean)
+aggregate(Pct ~ Period, data, sd)
+
+```
+
+```{r}
+# Logistic regression (using Pass vs Fail with Period as predictor)
+model <- glm(cbind(Pass, Fail) ~ Period, family = binomial, data = data)
+
+# Model summary
+summary(model)
+
+# Odds ratios and 95% CI
+library(broom)
+
+results <- tidy(model, exponentiate = TRUE, conf.int = TRUE)
+results
+```
+
+```
+
+
+
+```
+
+
