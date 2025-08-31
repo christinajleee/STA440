@@ -54,10 +54,50 @@ results <- tidy(model, exponentiate = TRUE, conf.int = TRUE)
 results
 ```
 
+```{r}
+ggplot(data, aes(x = Year, y = Pct)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "red") +
+  labs(title = "Pass Rates by Year with Reform Periods",
+       y = "Pass Rate", x = "Year")
+
+```
+```{r}
+res <- residuals(model, type="deviance")
+plot(data$Year, res, type="b",
+     main="Deviance Residuals by Year", xlab="Year", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+```{r}
+qb_model <- glm(cbind(Pass, Fail) ~ Period,
+                family = quasibinomial, data = data)
+summary(qb_model)$dispersion   # >1 means overdispersion
+
+```
+
+```{r}
+# Logistic regression fit
+logit_mod <- glm(cbind(Pass, Fail) ~ Period,
+                 family = binomial, data = data)
+
+# Add predicted probabilities to dataset
+data$fit <- predict(logit_mod, type = "response")
+
+# Plot actual vs fitted (within each year)
+ggplot(data, aes(x = Year)) +
+  geom_point(aes(y = Pct), size=2, color="black") +   # actual data
+  geom_line(aes(y = fit, group = 1), color="blue", size=1) +  # fitted values
+  geom_vline(xintercept = c(2003, 2011), linetype="dashed", color="red") +
+  labs(title = "Actual vs Predicted Pass Rates (Logistic Regression)",
+       x = "Year", y = "Pass Rate",
+       caption = "Black points = actual pass rates; Blue line = model prediction") +
+  theme_minimal()
 ```
 
 
 
-```
+
 
 
