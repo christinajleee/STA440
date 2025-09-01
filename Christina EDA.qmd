@@ -1,0 +1,115 @@
+```{r}
+library(dplyr)
+
+data <- read.table("data.txt", header = TRUE)
+```
+
+```{r}
+# Load data
+data <- read.table("data.txt", header = TRUE)
+
+# Separate the 3 different reform periods up
+data$Period <- cut(data$Year,
+                   breaks = c(1995, 2002, 2010, 2020),
+                   labels = c("Pre-2003 (before reform)", "2003-2010 (after reform 1)", "2011+ (after reform 2)"))
+
+# Compute number passing (successes) and failing (failures)
+data$Pass <- round(data$N * data$Pct)
+data$Fail <- data$N - data$Pass
+
+# Logistic regression: Passes vs. Fails across periods
+model <- glm(cbind(Pass, Fail) ~ Period, family = binomial, data = data)
+summary(model)
+
+# Plot 
+library(ggplot2)
+pred <- data.frame(Period = levels(data$Period))
+pred$fit <- predict(model, newdata = pred, type = "response")
+
+ggplot(data, aes(x = Year, y = Pct, color = Period)) +
+  geom_point(size = 2) +
+  geom_line(aes(group = 1), color = "grey") +
+  geom_hline(yintercept = pred$fit, linetype = "dashed", color = "black") +
+  labs(title = "Pass Rates Over Time with Reform Periods",
+       y = "Pass Rate", x = "Year") +
+  theme_minimal()
+```
+```{r}
+aggregate(Pct ~ Period, data, mean)
+aggregate(Pct ~ Period, data, sd)
+
+```
+
+```{r}
+# Logistic regression (using Pass vs Fail with Period as predictor)
+model <- glm(cbind(Pass, Fail) ~ Period, family = binomial, data = data)
+
+# Model summary
+summary(model)
+
+# Odds ratios and 95% CI
+library(broom)
+
+results <- tidy(model, exponentiate = TRUE, conf.int = TRUE)
+results
+```
+
+```{r}
+ggplot(data, aes(x = Year, y = Pct)) +
+  geom_point() +
+  geom_line() +
+  geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "red") +
+  labs(title = "Pass Rates by Year with Reform Periods",
+       y = "Pass Rate", x = "Year")
+
+```
+```{r}
+res <- residuals(model, type="deviance")
+plot(data$Year, res, type="b",
+     main="Deviance Residuals by Year", xlab="Year", ylab="Residuals")
+abline(h=0, col="red")
+
+```
+```{r}
+qb_model <- glm(cbind(Pass, Fail) ~ Period,
+                family = quasibinomial, data = data)
+summary(qb_model)$dispersion   # >1 means overdispersion
+
+```
+
+```{r}
+# Logistic regression fit
+logit_mod <- glm(cbind(Pass, Fail) ~ Period,
+                 family = binomial, data = data)
+
+# Add predicted probabilities to dataset
+data$fit <- predict(logit_mod, type = "response")
+
+# Plot actual vs fitted (within each year)
+ggplot(data, aes(x = Year)) +
+  geom_point(aes(y = Pct), size=2, color="black") +   # actual data
+  geom_line(aes(y = fit, group = 1), color="blue", size=1) +  # fitted values
+  geom_vline(xintercept = c(2003, 2011), linetype="dashed", color="red") +
+  labs(title = "Actual vs Predicted Pass Rates (Logistic Regression)",
+       x = "Year", y = "Pass Rate",
+       caption = "Black points = actual pass rates; Blue line = model prediction") +
+  theme_minimal()
+```
+```{r}
+# Add centered year (to capture trends within each period)
+data$Year_c <- data$Year - 2003
+
+# Logistic regression with period + linear year trend interaction
+trend_mod <- glm(cbind(Pass, Fail) ~ Period * Year_c,
+                 family = binomial, data = data)
+
+summary(trend_mod)
+
+```
+
+
+
+
+
+
+
