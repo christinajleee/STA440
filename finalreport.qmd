@@ -96,7 +96,7 @@ par(mfrow = c(1,1))
 
 ```{r}
 ggplot(x, aes(x = Year)) +
-  geom_point(aes(y = Pct), color = "blue", size = 2, alpha = 0.7) +
+  geom_point(aes(y = Pct), color = "black", size = 2, alpha = 0.7) +
   geom_line(aes(y = fitted_prob), color = "red", size = 1.2) +
   geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "gray50", alpha = 0.8) +
   annotate("text", x = 2003, y = 0.945, label = "Reform 1", angle = 90, vjust = -0.5) +
