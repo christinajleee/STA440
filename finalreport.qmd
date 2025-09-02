@@ -1,7 +1,33 @@
 ---
-title: "finalreport"
+title: "Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents Exam"
 format: html
 ---
+
+## 1 Background
+
+An important standard for medical residents in the US is the internal medicine certification exam, which serves as a gauge of graduate medical education efficacy as well as an indicator of individual competency. Concerns regarding resident workload, exhaustion, and training quality have led to significant changes in residency programs during the last 20 years. Two particularly significant milestones were the 2003 duty hour reform, introduced by the Accreditation Council for Graduate Medical Education (ACGME), and the 2011 revision, which further tightened duty hour restrictions. While maintaining the caliber of training and board certification preparation, these reforms sought to strike a balance between resident well-being and patient safety.
+
+The effect of these reforms on educational outcomes has been a topic of discussion despite their extensive implementation. Supporters contended that better-rested residents would learn more efficiently and perform better on tests, while critics claimed that fewer hours might limit residents' clinical exposure and jeopardize exam performance. Since the internal medicine certification exam offers a standardized assessment of knowledge and preparedness for independent practice, comparing pass rates over these reform periods provides important information about whether or not these structural changes were successful.
+
+## 2 Exploratory Data Analysis
+
+```{r}
+x <- read.table("data.txt", header = TRUE, as.is = TRUE)
+head(x)
+```
+
+The dataset used in this analysis consists of annual certification exam results for internal medicine residents across three distinct time periods: the pre-reform era, the years following the 2003 duty hour reform, and the years following the 2011 duty hour reform.
+
+Variables:\
+Year: The year of the exam.\
+N: The number of residents who attempted the exam.\
+Pct: The fraction who passed the exam, expressed as a percentage.
+
+Before proceeding to formal modeling, an exploratory data analysis was conducted to visualize trends in pass rates, identify patterns across reform periods, and assess variability in the outcomes.
+
+(add more eda)
+
+## 3 
 
 ```{r}
 library(VGAM)
