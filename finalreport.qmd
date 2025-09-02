@@ -27,7 +27,23 @@ Before proceeding to formal modeling, an exploratory data analysis was conducted
 
 (add more eda)
 
-## 3 
+## 3 Modeling
+
+(3 points) The rationale for the model. The structure of the (sampling) model is justified based on the exploratory analysis, study design, structural constraints and/or a priori considerations. Prior distributions and their hyper-parameters are justified if a Bayesian approach is taken.
+
+## 4 Analysis
+
+(2 points) Model implementation details. How was/were the model(s) fit? Were adequate diagnostics reported; were these correctly interpreted and heeded.
+
+(1 point) Model evaluation steps and reporting of appropriate goodness-of- fit metrics.
+
+(3 points) The modeling results. Each analysis question, objective and/or goal is addressed. The description is clearly tied to the data and application area objectives; the results are correctly interpreted.
+
+## 5 Conclusion & Future Work
+
+(1 point) Shortcomings of the analysis. Provide model criticisms, (future) directions for improvement.
+
+(1 point) Overall conclusions. A short concluding paragraph highlighting key points.
 
 ```{r}
 library(VGAM)
