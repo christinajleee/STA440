@@ -1,6 +1,6 @@
 ---
 title: "Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents Exam"
-format: html
+format: pdf
 ---
 
 ## 1 Background
@@ -12,8 +12,8 @@ The effect of these reforms on educational outcomes has been a topic of discussi
 ## 2 Exploratory Data Analysis
 
 ```{r}
-x <- read.table("data.txt", header = TRUE, as.is = TRUE)
-head(x)
+data <- read.table("data.txt", header = TRUE, as.is = TRUE)
+head(data)
 ```
 
 The dataset used in this analysis consists of annual certification exam results for internal medicine residents across three distinct time periods: the pre-reform era, the years following the 2003 duty hour reform, and the years following the 2011 duty hour reform.
@@ -24,6 +24,47 @@ N: The number of residents who attempted the exam.\
 Pct: The fraction who passed the exam, expressed as a percentage.
 
 Before proceeding to formal modeling, an exploratory data analysis was conducted to visualize trends in pass rates, identify patterns across reform periods, and assess variability in the outcomes.
+
+```{r}
+library(dplyr)
+library(ggplot2)
+
+# Split up reform periods
+data$Period <- cut(
+  data$Year,
+  breaks = c(1995, 2002, 2010, 2020),
+  labels = c(
+    "Pre-2003 (before reform)",
+    "2003-2010 (after reform 1)",
+    "2011+ (after reform 2)"
+  )
+)
+
+# Compute average Pct for each period
+period_means <- data |>
+  group_by(Period) |>
+  summarise(mean_pct = mean(Pct, na.rm = TRUE))
+
+# Plot points, lines, and dashed horizontal lines
+ggplot(data, aes(x = Year, y = Pct, color = Period)) +
+  geom_point(size = 2) +
+  geom_line(aes(group = 1), color = "grey") +
+  geom_hline(
+    data = period_means,
+    aes(yintercept = mean_pct),
+    linetype = "dashed",
+    color = "black"
+  ) +
+  labs(
+    title = "Pass Rates Over Time with Reform Periods",
+    y = "Pass Rate",
+    x = "Year"
+  ) +
+  theme_minimal()
+
+aggregate(Pct ~ Period, data, mean)
+```
+According to the line plot, the data is divided into three distinct time periods corresponding to the timing of the reforms (color coded and labeled in the legend). Pass rates noticeably increased after the first reform in 2003 compared to the pre-2003 period. However, they gradually declined until the second reform in 2011, after which rates began to rise again. Despite this rebound, the average pass rate following the 2003 reform (0.91) remained higher than the average after the 2011 reform (0.86), as shown by the dotted reference lines.
 
 (add more eda)
 
