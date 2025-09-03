@@ -145,7 +145,6 @@ summary_table <- data.frame(
   CI_upper   = c(round(ci_upper,3), NA),
   Predicted_Prob = c(round(pred_probs,3), NA)
 )
-
 print("=== Model Summary Table (aligned correctly) ===")
 print(summary_table)
 
@@ -154,28 +153,71 @@ cat("Standard Binomial AIC:", AIC(binomial_model), "\n")
 
 x$fitted_prob <- fitted(bb_model)[,1]
 x$resid_resp  <- residuals(bb_model, type = "response")
+```
 
-par(mfrow = c(2, 2))
-plot(x$fitted_prob, x$resid_resp,
-     main = "Residuals vs Fitted",
-     xlab = "Fitted Values", ylab = "Residuals")
-abline(h = 0, lty = 2)
-
-qqnorm(x$resid_resp)
-qqline(x$resid_resp)
-
-plot(x$Pct, x$fitted_prob,
-     main = "Observed vs Fitted",
-     xlab = "Observed", ylab = "Fitted")
-abline(0,1,lty=2)
-
+```{r}
+# Residual Plot
 plot(x$Year, x$resid_resp,
      main = "Residuals over Time",
      xlab = "Year", ylab = "Residuals")
 abline(h=0,lty=2)
 par(mfrow = c(1,1))
+```
+```{r}
+library(VGAM)
+library(dplyr)
+library(broom)
+
+# --- Fit models ---
+binomial_model <- glm(cbind(Pass, Fail) ~ timeperiod, family = binomial, data = x)
+bb_model <- vglm(cbind(Pass, Fail) ~ timeperiod, betabinomial, data = x)
+
+# --- 1. Model comparison (AIC) ---
+aic_table <- data.frame(
+  Model = c("Binomial", "Beta-binomial"),
+  AIC   = c(AIC(binomial_model), AIC(bb_model))
+)
+
+# --- 2. Dispersion parameter from beta-binomial ---
+coef_all <- Coef(bb_model)
+dispersion_param <- coef_all["(Intercept):2"]
+
+# --- 3. Predicted probabilities with CIs ---
+newdat <- data.frame(timeperiod = factor(c("tp1","tp2","tp3"),
+                                         levels = levels(x$timeperiod)))
+
+pred_link <- predict(bb_model, newdata = newdat, type = "link", se.fit = TRUE)
+pred_prob <- plogis(pred_link$fit)
+ci_lower  <- plogis(pred_link$fit - 1.96 * pred_link$se.fit)
+ci_upper  <- plogis(pred_link$fit + 1.96 * pred_link$se.fit)
+
+pred_table <- data.frame(
+  Period = newdat$timeperiod,
+  Pred_Prob = round(pred_prob, 3),
+  CI_lower  = round(ci_lower, 3),
+  CI_upper  = round(ci_upper, 3)
+)
+
+# --- 4. Combine summary results ---
+list(
+  AICs = aic_table,
+  Dispersion = dispersion_param,
+  Predictions = pred_table
+)
+
+# Extract dispersion coefficient (logit scale)
+disp_coef <- Coef(bb_model)["(Intercept):2"]
+
+# Back-transform from logit to get rho (dispersion parameter)
+disp_param <- plogis(disp_coef)
+
+cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
+cat("Estimated dispersion parameter (rho):", disp_param, "\n")
+
 
 ```
+
+
 
 ```{r}
 ggplot(x, aes(x = Year)) +
