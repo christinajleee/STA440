@@ -3,20 +3,6 @@ title: "Analysis to Assess the Effects of Two Sets of Reform to a Medical Reside
 format: pdf
 ---
 
-```{r}
-#| echo: false
-#| message: false
-#| warning: false
-library(VGAM)
-library(ggplot2)
-library(dplyr)
-library(scales)
-library(broom)
-library(car)
-library(sandwich)
-x <- read.table("data.txt", header = TRUE, as.is = TRUE)
-```
-
 ## 1 Background
 
 An important standard for medical residents in the US is the internal medicine certification exam, which serves as a gauge of graduate medical education efficacy as well as an indicator of individual competency. Concerns regarding resident workload, exhaustion, and training quality have led to significant changes in residency programs during the last 20 years. Two particularly significant milestones were the 2003 duty hour reform, introduced by the Accreditation Council for Graduate Medical Education (ACGME), and the 2011 revision, which further tightened duty hour restrictions. While maintaining the caliber of training and board certification preparation, these reforms sought to strike a balance between resident well-being and patient safety.
@@ -38,7 +24,11 @@ According to the line plot, the data is divided into three distinct time periods
 
 ## 3 Modeling
 
-(3 points) The rationale for the model. The structure of the (sampling) model is justified based on the exploratory analysis, study design, structural constraints and/or a priori considerations. Prior distributions and their hyper-parameters are justified if a Bayesian approach is taken.
+Exam pass rate variability across cohorts was found to be greater than what could be explained by a standard binomial model, as evidenced by a residual deviance to degrees-of-freedom ratio of 31.71. This overdispersion implies that there are more underlying variations in pass probability among cohorts than can be explained by a straightforward binomial assumption. We chose a beta-binomial model to address this, which accounts for extra-binomial variability and appropriately inflates the variance by introducing a dispersion parameter (ρ≈0.0036). Therefore, the beta-binomial model gives us more realistic confidence intervals around the estimated pass rates and enables us to model the inherent heterogeneity among cohorts.
+
+The model's structural division of students into three time periods, pre-2003, 2003--2010, and post-2011, reflects the training program's primary reforms and is in line with significant adjustments to the curriculum, evaluation standards, and policy. This grouping captures significant changes in pass rates linked to reforms while honoring the study design and mitigating noise that could result from year-to-year variations. Future work could include a lag term to account for potential delayed impacts of reforms on cohorts that underwent multiple policy changes during their training, even though our current analysis does not formally include lagged reform effects.
+
+Lastly, the comparison of fitted probabilities and 95% CI bands with observed pass rates and their binomial error bars provides evidence for the validity of the model. The observed rates show that the model fits the data better because they are mostly contained within the beta-binomial intervals but often fall outside the binomial confidence intervals.
 
 ## 4 Analysis
 
@@ -56,15 +46,26 @@ P-values were also calculated for each of the two reform periods to see whether 
 
 ## 6 Appendix
 
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+library(VGAM)
+library(ggplot2)
+library(dplyr)
+library(scales)
+library(broom)
+library(car)
+library(sandwich)
+x <- read.table("data.txt", header = TRUE, as.is = TRUE)
+```
+
 ```{r, echo=FALSE}
 data <- read.table("data.txt", header = TRUE, as.is = TRUE)
 head(data)
 ```
 
 ```{r, echo=FALSE}
-library(dplyr)
-library(ggplot2)
-
 # Split up reform periods
 data$Period <- cut(
   data$Year,
@@ -160,21 +161,13 @@ x$resid_resp  <- residuals(bb_model, type = "response")
 ```
 
 ```{r, echo=FALSE}
-library(VGAM)
-library(dplyr)
-library(broom)
 
-# --- Fit models ---
 binomial_model <- glm(cbind(Pass, Fail) ~ timeperiod, family = binomial, data = x)
 bb_model <- vglm(cbind(Pass, Fail) ~ timeperiod, betabinomial, data = x)
 
-# Pearson residuals
 pearson_resid <- residuals(binomial_model, type = "pearson")
-
-# Deviance residuals
 deviance_resid <- residuals(binomial_model, type = "deviance")
 
-# Pearson goodness-of-fit statistic (sum of squared Pearson residuals)
 pearson_chisq <- sum(pearson_resid^2)
 df_res <- binomial_model$df.residual
 pearson_p_value <- pchisq(pearson_chisq, df_res, lower.tail = FALSE)
@@ -190,18 +183,14 @@ cat("Residual df:", df_res, "\n")
 cat("Lack-of-fit p-value:",
     pchisq(binomial_model$deviance, df_res, lower.tail = FALSE), "\n")
 
-
-# --- 1. Model comparison (AIC) ---
 aic_table <- data.frame(
   Model = c("Binomial", "Beta-binomial"),
   AIC   = c(AIC(binomial_model), AIC(bb_model))
 )
 
-# --- 2. Dispersion parameter from beta-binomial ---
 coef_all <- Coef(bb_model)
 dispersion_param <- coef_all["(Intercept):2"]
 
-# --- 3. Predicted probabilities with CIs ---
 newdat <- data.frame(timeperiod = factor(c("tp1","tp2","tp3"),
                                          levels = levels(x$timeperiod)))
 
@@ -217,17 +206,14 @@ pred_table <- data.frame(
   CI_upper  = round(ci_upper, 3)
 )
 
-# --- 4. Combine summary results ---
 list(
   AICs = aic_table,
   Dispersion = dispersion_param,
   Predictions = pred_table
 )
 
-# Extract dispersion coefficient (logit scale)
 disp_coef <- Coef(bb_model)["(Intercept):2"]
 
-# Back-transform from logit to get rho (dispersion parameter)
 disp_param <- plogis(disp_coef)
 
 cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
@@ -244,22 +230,16 @@ par(mfrow = c(1,1))
 ```
 
 ```{r, echo=FALSE, fig.width=7, fig.height=5}
-# Deviance residuals
+
 x$resid_dev <- residuals(bb_model, type = "deviance")
-
-# Build design matrix for fitted values
 X <- model.matrix(~ timeperiod, data = x)
-
-# Coefficients and covariance
 coef_bb <- coef(bb_model)
 vcov_bb <- vcov(bb_model)
 
-# Linear predictor + standard errors
 linpred <- X %*% coef_bb[c("(Intercept):1","timeperiodtp2","timeperiodtp3")]
 se_fit  <- sqrt(diag(X %*% vcov_bb[c("(Intercept):1","timeperiodtp2","timeperiodtp3"),
                                    c("(Intercept):1","timeperiodtp2","timeperiodtp3")] %*% t(X)))
 
-# 95% CI on probability scale
 fit_prob <- plogis(linpred)
 ci_low   <- plogis(linpred - 1.96 * se_fit)
 ci_high  <- plogis(linpred + 1.96 * se_fit)
@@ -268,35 +248,23 @@ x$fitted_prob <- fit_prob
 x$ci_low <- ci_low
 x$ci_high <- ci_high
 
-# Observed proportions already in x$Pct
 x$obs_se <- sqrt((x$Pct * (1 - x$Pct)) / x$N)
 x$obs_low <- x$Pct - 1.96 * x$obs_se
 x$obs_high <- x$Pct + 1.96 * x$obs_se
 
-# Clip to [0,1]
 x$obs_low[x$obs_low < 0] <- 0
 x$obs_high[x$obs_high > 1] <- 1
 
 ggplot(x, aes(x = Year)) +
-  # observed points
   geom_point(aes(y = Pct), color = "black", size = 2, alpha = 0.7) +
-  
-  # error bars on observed data
   geom_errorbar(aes(ymin = obs_low, ymax = obs_high),
                 width = 0.3, color = "black", alpha = 0.7) +
-  
-  # fitted line
   geom_line(aes(y = fitted_prob), color = "red", size = 1.2) +
-  
-  # model CI dotted lines
   geom_line(aes(y = ci_low), linetype = "dotted", color = "red") +
   geom_line(aes(y = ci_high), linetype = "dotted", color = "red") +
-  
-  # reform markers
   geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "gray50", alpha = 0.8) +
   annotate("text", x = 2003, y = 0.945, label = "Reform 1", angle = 90, vjust = -0.5) +
   annotate("text", x = 2011, y = 0.945, label = "Reform 2", angle = 90, vjust = -0.5) +
-  
   labs(
     title = "Medical Residents Exam Pass Rates",
     subtitle = "Observed vs Fitted with Beta-Binomial Model",
@@ -310,7 +278,16 @@ ggplot(x, aes(x = Year)) +
     plot.subtitle = element_text(hjust = 0.5),
     axis.title = element_text(face = "bold")
   )
+```
 
+```{r}
+binomial_model <- glm(cbind(Pass, Fail) ~ timeperiod, 
+                      family = binomial, data = x)
+res_dev <- deviance(binomial_model)
+df_res  <- df.residual(binomial_model)
+
+dispersion_ratio <- res_dev / df_res
+dispersion_ratio
 ```
 
 Extra:
@@ -367,28 +344,6 @@ cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
 cat("Estimated dispersion parameter (rho):", disp_param, "\n")
 
 
-```
-
-```{r}
-ggplot(x, aes(x = Year)) +
-  geom_point(aes(y = Pct), color = "black", size = 2, alpha = 0.7) +
-  geom_line(aes(y = fitted_prob), color = "red", size = 1.2) +
-  geom_vline(xintercept = c(2003, 2011), linetype = "dashed", color = "gray50", alpha = 0.8) +
-  annotate("text", x = 2003, y = 0.945, label = "Reform 1", angle = 90, vjust = -0.5) +
-  annotate("text", x = 2011, y = 0.945, label = "Reform 2", angle = 90, vjust = -0.5) +
-  labs(
-    title = "Medical Residents Exam Pass Rates",
-    subtitle = "Observed vs Fitted with Beta-Binomial Model",
-    y = "Pass Rate",
-    x = "Year"
-  ) +
-  scale_y_continuous(limits = c(0.8, 0.95), labels = scales::percent) +
-  theme_minimal(base_size = 14) +
-  theme(
-    plot.title = element_text(hjust = 0.5, face = "bold"),
-    plot.subtitle = element_text(hjust = 0.5),
-    axis.title = element_text(face = "bold")
-  )
 ```
 
 The baseline log-odds of passing during the pre-reform era (tp1) are represented by the intercept for mu. While the coefficient for timeperiodtp3 shows a smaller increase that is not statistically significant at conventional levels, the coefficient for timeperiodtp2 shows a statistically significant increase in pass rates in comparison to the baseline. There is only slight overdispersion in the data, as indicated by the dispersion parameter (rho), which is small and not statistically significant.\
