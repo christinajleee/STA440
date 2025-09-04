@@ -202,34 +202,32 @@ summary_table |>
 
 ```{r, echo=FALSE}
 
+#Fit models
 binomial_model <- glm(cbind(Pass, Fail) ~ timeperiod, family = binomial, data = x)
 bb_model <- vglm(cbind(Pass, Fail) ~ timeperiod, betabinomial, data = x)
 
-pearson_resid <- residuals(binomial_model, type = "pearson")
-deviance_resid <- residuals(binomial_model, type = "deviance")
+#Binomial residual
+pearson_resid   <- residuals(binomial_model, type = "pearson")
+pearson_chisq   <- sum(pearson_resid^2)
+df_res          <- binomial_model$df.residual
+dispersion_est  <- binomial_model$deviance / df_res
 
-pearson_chisq <- sum(pearson_resid^2)
-df_res <- binomial_model$df.residual
-pearson_p_value <- pchisq(pearson_chisq, df_res, lower.tail = FALSE)
+gof_table <- tibble(
+  Statistic = c("Pearson Chi-square", "Residual Deviance", "Residual df", "Dispersion estimate"),
+  Value     = c(round(pearson_chisq, 2),
+                round(binomial_model$deviance, 2),
+                df_res,
+                round(dispersion_est, 2))
+)
+#AIC comparison
+aic_table <- tibble(
+  Model = c("Binomial", "Beta-binomial"),
+  AIC   = c(round(AIC(binomial_model), 2),
+            round(AIC(bb_model), 2))
+)
 
-cat("=== Pearson Residuals ===\n")
-cat("Pearson Chi-square:", pearson_chisq, "\n")
-cat("Residual df:", df_res, "\n")
-cat("Goodness-of-fit p-value:", pearson_p_value, "\n\n")
-
-cat("=== Deviance Residuals ===\n")
-cat("Residual Deviance:", binomial_model$deviance, "\n")
-cat("Residual df:", df_res, "\n")
-cat("Lack-of-fit p-value:",
-    pchisq(binomial_model$deviance, df_res, lower.tail = FALSE), "\n")
-
-disp_coef <- Coef(bb_model)["(Intercept):2"]
-
-disp_param <- plogis(disp_coef)
-
-cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
-cat("Estimated dispersion parameter (rho):", disp_param, "\n")
-
+gof_table
+aic_table
 ```
 
 ```{r, echo = FALSE, results='hide'}
