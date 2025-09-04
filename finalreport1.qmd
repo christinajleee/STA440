@@ -33,7 +33,7 @@ $$
 \rho = \frac{\exp(-5.633)}{1 + \exp(-5.633)} \;\approx\; 0.0036
 $$
 
-Therefore, the beta-binomial model gives us more realistic confidence intervals around the estimated pass rates and enables us to model the inherent heterogeneity among cohorts.
+Therefore, the beta-binomial model gives us more realistic confidence intervals around the estimated pass rates and enables us to model the inherent heterogeneity among cohorts. The logistic regression model was not a good fit because even though the p-values were significant, the residual deviance was 539.15, which is greater than the expected value (17). Additionally, the AIC of the model was 714.13, which is greater than the AIC results of the Beta Binomial model.
 
 The model's structural division of students into three time periods, pre-2003, 2003--2010, and post-2011, reflects the training program's primary reforms and is in line with significant adjustments to the curriculum, evaluation standards, and policy. This grouping captures significant changes in pass rates linked to reforms while honoring the study design and mitigating noise that could result from year-to-year variations. Future work could include a lag term to account for potential delayed impacts of reforms on cohorts that underwent multiple policy changes during their training, even though our current analysis does not formally include lagged reform effects.
 
@@ -53,7 +53,7 @@ Some shortcomings of our analysis came from the limitations of the dataset, whic
 
 Additionally, our model, which splits the time periods distinctly into three groups, assumes immediate changes and jumps instantly to a new level the moment a reform starts, rather than the possibility of phasing-in effects, which is more realistic as residents are trained across three academic years and gradually would increase exposure to the reform effects. In the future, it could be possible to use interrupted time series to analyze outcomes measured over time, using the pre-2003 years as the baseline and estimating the jump and new slope after the 2003 and 2011 reforms.
 
-Using a beta-binomial model with the reform periods (pre-2003, 2003-2010, 2011 onward), we find strong evidence that the reform implemented in 2003 is related to a statistically significant increase in the medical certification exam pass rates in a year compared to pre-2003 (p-value \<\< 0.05), while the reform implemented in 2011 shows no statistically significant change compared to pre-2003 and has lower average rates than 2003-2010. The beta-binomial model was favored compared to the binomial due to its lower AIC, and the residuals show no systematic pattern. These conclusions are consistent with prior evidence in medical education, where it is likely that the 80-hour cap on duty hours implemented in 2003 likely improved rest and study time, supporting higher pass rates, while the cap on first-year resident shift times introduced 2011 reduced clinical exposure.
+Using a beta-binomial model with the reform periods (pre-2003, 2003-2010, 2011 onward), we find strong evidence that the reform implemented in 2003 is related to a statistically significant increase in the medical certification exam pass rates in a year compared to pre-2003 (p-value \<\< 0.05), while the reform implemented in 2011 shows no statistically significant change compared to pre-2003 and has lower average rates than 2003-2010. The beta-binomial model was favored compared to the binomial due to its lower AIC, and the residuals show no systematic pattern. These conclusions are consistent with prior evidence in medical education, where it is likely that the 80-hour cap on duty hours implemented in 2003 likely improved rest and study time, supporting higher pass rates, while the cap on first-year resident shift times introduced in 2011 reduced clinical exposure.
 
 ## 6 Appendix
 
@@ -67,6 +67,9 @@ library(dplyr)
 library(scales)
 library(broom)
 library(car)
+library(knitr)
+library(kableExtra)
+library(gt)
 library(sandwich)
 x <- read.table("data.txt", header = TRUE, as.is = TRUE)
 ```
@@ -75,12 +78,16 @@ x <- read.table("data.txt", header = TRUE, as.is = TRUE)
 
 ```{r, echo=FALSE}
 data <- read.table("data.txt", header = TRUE, as.is = TRUE)
-head(data)
+
+kable(
+  head(data),
+  caption = "Table 1. First six rows of the internal medicine exam dataset (N = # of exam takers, Pct = % passed)."
+)
 ```
 
 2.  EDA Graph and Average
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, results = 'hide'}
 # Split up reform periods
 data$Period <- cut(
   data$Year,
@@ -97,6 +104,10 @@ period_means <- data |>
   group_by(Period) |>
   summarise(mean_pct = mean(Pct, na.rm = TRUE))
 
+aggregate(Pct ~ Period, data, mean)
+```
+
+```{r, echo=FALSE}
 # Plot points, lines, and dashed horizontal lines
 ggplot(data, aes(x = Year, y = Pct, color = Period)) +
   geom_point(size = 2) +
@@ -113,8 +124,13 @@ ggplot(data, aes(x = Year, y = Pct, color = Period)) +
     x = "Year"
   ) +
   theme_minimal()
+```
 
-aggregate(Pct ~ Period, data, mean)
+```{r, echo=FALSE}
+kable(
+  period_means,
+  caption = "Table 2. Average pass rate by reform period (pre-2003, 2003–2010, and 2011+)"
+)
 ```
 
 3.  Beta-Binomial Summary Table
@@ -170,7 +186,15 @@ summary_table <- data.frame(
 x$fitted_prob <- fitted(bb_model)[,1]
 x$resid_resp  <- residuals(bb_model, type = "response")
 
-summary_table
+
+summary_table |>
+  gt() |>
+  tab_header(
+    title = "Table 3. Beta-binomial regression estimates by reform period"
+  ) |>
+  tab_options(
+    table.font.size = px(10)
+  )
 
 ```
 
@@ -199,6 +223,16 @@ cat("Residual df:", df_res, "\n")
 cat("Lack-of-fit p-value:",
     pchisq(binomial_model$deviance, df_res, lower.tail = FALSE), "\n")
 
+disp_coef <- Coef(bb_model)["(Intercept):2"]
+
+disp_param <- plogis(disp_coef)
+
+cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
+cat("Estimated dispersion parameter (rho):", disp_param, "\n")
+
+```
+
+```{r, echo = FALSE, results='hide'}
 aic_table <- data.frame(
   Model = c("Binomial", "Beta-binomial"),
   AIC   = c(AIC(binomial_model), AIC(bb_model))
@@ -228,12 +262,30 @@ list(
   Predictions = pred_table
 )
 
-disp_coef <- Coef(bb_model)["(Intercept):2"]
 
-disp_param <- plogis(disp_coef)
+```
 
-cat("Dispersion coefficient (logit scale):", disp_coef, "\n")
-cat("Estimated dispersion parameter (rho):", disp_param, "\n")
+```{r, echo=FALSE}
+kable(
+  aic_table,
+  booktabs = TRUE,
+  caption = "AIC comparison of Binomial vs Beta-binomial models"
+)
+
+kable(
+  data.frame(Dispersion_Coef_Logit = round(disp_coef, 3),
+             Rho = round(disp_param, 4)),
+  booktabs = TRUE,
+  caption = "Dispersion coefficient (logit scale) and estimated dispersion parameter (ρ)."
+)
+
+colnames(pred_table) <- c("Period", "Predicted Prob Mu", "Predicted Prob Rho","CI Lower Mu", "CI Lower Rho", "CI Upper Mu", "CI Upper Rho")
+
+kable(
+  pred_table,
+  booktabs = TRUE,
+  caption = "Table 3. Predicted pass probabilities by reform period (95% CI)."
+)
 ```
 
 5.  Residual Plot
