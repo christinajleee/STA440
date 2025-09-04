@@ -1,11 +1,12 @@
 ---
-title: Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents
-  Exam
+title: "Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents Exam"
 format: pdf
 header-includes:
-- \usepackage{longtable}
-- \usepackage{pdflscape}
-output: pdf_document
+  - \usepackage{longtable}
+  - \usepackage{pdflscape}
+output:
+  pdf_document:
+    latex_engine: xelatex
 ---
 
 ## 1 Background
