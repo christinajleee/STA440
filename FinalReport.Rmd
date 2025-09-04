@@ -1,9 +1,11 @@
 ---
-title: "Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents Exam"
-format: rmd
+title: Analysis to Assess the Effects of Two Sets of Reform to a Medical Residents
+  Exam
+format: pdf
 header-includes:
-  - \usepackage{longtable}
-  - \usepackage{pdflscape}
+- \usepackage{longtable}
+- \usepackage{pdflscape}
+output: pdf_document
 ---
 
 ## 1 Background
