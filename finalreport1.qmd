@@ -49,9 +49,11 @@ P-values were also calculated for each of the two reform periods to see whether 
 
 ## 5 Conclusion & Future Work
 
-(1 point) Shortcomings of the analysis. Provide model criticisms, (future) directions for improvement.
+Some shortcomings of our analysis came from the limitations of the dataset, which only provided the pass rate per year overall and did not show any individual-level variation, such as demographics, residency rotation, and program resources, limiting control for confounding. A potential for improvement would come from obtaining program or resident-level data.
 
-(1 point) Overall conclusions. A short concluding paragraph highlighting key points.
+Additionally, our model, which splits the time periods distinctly into three groups, assumes immediate changes and jumps instantly to a new level the moment a reform starts, rather than the possibility of phasing-in effects, which is more realistic as residents are trained across three academic years and gradually would increase exposure to the reform effects. In the future, it could be possible to use interrupted time series to analyze outcomes measured over time, using the pre-2003 years as the baseline and estimating the jump and new slope after the 2003 and 2011 reforms.
+
+Using a beta-binomial model with the reform periods (pre-2003, 2003-2010, 2011 onward), we find strong evidence that the reform implemented in 2003 is related to a statistically significant increase in the medical certification exam pass rates in a year compared to pre-2003 (p-value \<\< 0.05), while the reform implemented in 2011 shows no statistically significant change compared to pre-2003 and has lower average rates than 2003-2010. The beta-binomial model was favored compared to the binomial due to its lower AIC, and the residuals show no systematic pattern. These conclusions are consistent with prior evidence in medical education, where it is likely that the 80-hour cap on duty hours implemented in 2003 likely improved rest and study time, supporting higher pass rates, while the cap on first-year resident shift times introduced 2011 reduced clinical exposure.
 
 ## 6 Appendix
 
